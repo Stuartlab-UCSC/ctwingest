@@ -24,8 +24,12 @@ def get_expression(adata, use_raw=True):
 
 
 def std_gt_0_genes(centroids):
-    """returns genes that have std > 0"""
-    return centroids.index[(centroids.std(axis=1) != 0).tolist()]
+    """returns genes that have std != 0"""
+    # remove clusters with std = 0 first
+    centroids = centroids.loc[:, centroids.std(axis=0) != 0]
+    # now remove genes with std = 0
+    centroids = centroids.loc[centroids.std(axis=1) != 0, :]
+    return centroids.index
 
 
 def proportion_expressed_cluster(adata, clustering, use_raw=True):
