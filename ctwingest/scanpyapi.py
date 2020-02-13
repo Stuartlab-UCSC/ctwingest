@@ -3,12 +3,13 @@ import anndata
 import pandas as pd
 import numpy as np
 from scipy.sparse.csr import csr_matrix
+from geosketch import gs
 
 def n_clusters(adata, cluster_solution_name):
     return len(adata.obs[cluster_solution_name].unique().dropna())
 
 
-def get_expression(adata, use_raw=True):
+def get_expression(adata, use_raw=True, use_geosketch=False, geosketch_N=10000, geosketch_transform=None):
     """Grab expression and put into pandas dataframe."""
     if use_raw:
         ad = adata.raw
@@ -20,12 +21,52 @@ def get_expression(adata, use_raw=True):
     else:
         df = pd.DataFrame(ad.X, index=ad.obs_names, columns=ad.var_names)
 
+    if use_geosketch:
+        if geosketch_transform==None:
+            sc.tl.umap(adata, n_components=2)
+            geosketch_transform = "umap"
+        sketch_index = gs(adata.obsm[("X_" + geosketch_transform)], geosketch_N, replace=False)
+        df = df.loc[sketch_index]
+        
     return df.transpose()
+
+from collections import Counter
+from math import ceil
+
+
+def multi_sketch(dimRed, fractions, clusters):
+    """
+    Do geometric sketches of the data given in dimRed, one per fraction
+    """
+    total_cells = dimRed.shape[0]
+    percentages = ["pct" + str(int(i*100)) for i in fractions]
+    all_counts = Counter(clusters)
+    cluster_names = [str(i) for i in sorted([int(float(i)) for i in list(set(clusters))])]
+    sketch_index_by_percentage = {}
+    sketch_N = []
+
+    sketch_df = pd.DataFrame(columns = percentages + ['full'], index = cluster_names)
+    for key, value in all_counts.items():
+        sketch_df.loc[key, 'full'] = value
+    for i, fraction in enumerate(fractions):
+        N = ceil(total_cells * fraction)
+        print("total number of cells: ", total_cells, "; fraction: ", fraction, "; fraction # cells: ", N)
+        sketch_N = sketch_N + [N]
+        this_sketch_index = gs(dimRed, N, replace=False)
+        sketch_index_by_percentage[percentages[i]] = this_sketch_index
+        subset_counts = Counter(clusters.iloc[this_sketch_index])
+        for key, value in subset_counts.items():
+            sketch_df.loc[key, percentages[i]] = value
+    return sketch_df, sketch_index_by_percentage, sketch_N
 
 
 def std_gt_0_genes(centroids):
-    """returns genes that have std > 0"""
-    return centroids.index[(centroids.std(axis=1) != 0).tolist()]
+    """returns genes that have std != 0"""
+    # remove clusters with std = 0 first
+    centroids = centroids.loc[:, centroids.std(axis=0) != 0]
+    # now remove genes with std = 0
+    centroids = centroids.loc[centroids.std(axis=1) != 0, :]
+    return centroids.index
 
 
 def proportion_expressed_cluster(adata, clustering, use_raw=True):

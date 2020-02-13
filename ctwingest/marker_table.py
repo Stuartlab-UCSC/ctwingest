@@ -35,8 +35,8 @@ def run_pipe(ad, cluster_solution_name="louvain", use_raw=True):
     print("Calculating centroids and proportions of %d samples and %d genes with %d clusters" % (
         expression_matrix.shape[0], expression_matrix.shape[1], len(clusters)
     ))
-    proportions = proportion_expressed_cluster(ad, cluster_solution)
-    centroid_df = centroids(ad, cs_name=cluster_solution_name, use_raw=True)
+    proportions = proportion_expressed_cluster(ad, cluster_solution, use_raw=use_raw)
+    centroid_df = centroids(ad, cs_name=cluster_solution_name, use_raw=use_raw)
 
 
 
@@ -59,7 +59,8 @@ def run_pipe(ad, cluster_solution_name="louvain", use_raw=True):
         df = pd.DataFrame(
             index=expression_matrix.columns,
             #columns=["tstat", "pct.exp", "zstat", "log2fc", "zpval", "tpval", "cluster"]
-            columns=["gene", "avg.exp.scaled", "pct.exp", "t-statistic", "p-value", "cluster"]
+            #columns=["gene", "avg.exp.scaled", "pct.exp", "t-statistic", "p-value", "cluster"]
+            columns=["gene", "avg.exp.scaled", "pct.exp", "u-statistic", "p-value", "cluster"]
         )
         df['cluster'] = cluster_name
 
@@ -93,15 +94,16 @@ def run_pipe(ad, cluster_solution_name="louvain", use_raw=True):
         stat_pval = expression_matrix.apply(test, axis="index")
         stat = stat_pval.apply(lambda x: x[0])
         pval = stat_pval.apply(lambda x: x[1])
+        rownames = df.index.tolist()
 
         df["u-statistic"] = stat
         df['p-value'] = pval
         #df["zstat"] = zstat
         #df["zpval"] = zpval
-        df['gene'] = df.index.tolist()
-        df['pct.exp'] = proportions[cluster_name][df.index]
-        df['avg.exp'] = centroid_df[cluster_name][df.index]
-        df['avg.exp.scaled'] = scaled_centroid_df[cluster_name][df.index]
+        df['gene'] = rownames
+        df['pct.exp'] = proportions.loc[rownames, str(cluster_name)]
+        df['avg.exp'] = centroid_df.loc[rownames, str(cluster_name)]
+        df['avg.exp.scaled'] = scaled_centroid_df.loc[rownames, str(cluster_name)]
 
         dfs.append(df)
 
