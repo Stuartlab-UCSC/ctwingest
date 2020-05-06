@@ -22,6 +22,8 @@ def run_pipe(ad, cluster_solution_name="louvain", use_raw=True):
     make metrics directly from counts. If .raw is not there then proceeds with whatever is in anndata.expression_matrix.
     Metrics are t-statistic a proportions z-statistic, their pvalues and log2fc."""
 
+    print("BEGIN run_pipe")
+
     # Grab the expression matrix and get ready for processing.
     expression_matrix = get_expression(ad, use_raw=use_raw)
     expression_matrix = expression_matrix.transpose()
@@ -35,8 +37,12 @@ def run_pipe(ad, cluster_solution_name="louvain", use_raw=True):
     print("Calculating centroids and proportions of %d samples and %d genes with %d clusters" % (
         expression_matrix.shape[0], expression_matrix.shape[1], len(clusters)
     ))
-    proportions = proportion_expressed_cluster(ad, cluster_solution)
-    centroid_df = centroids(ad, cs_name=cluster_solution_name, use_raw=True)
+    # proportions = proportion_expressed_cluster(ad, cluster_solution)
+    # cw_20200506 respect the use_raw parameter
+    proportions = proportion_expressed_cluster(ad, cluster_solution, use_raw=use_raw)
+    # centroid_df = centroids(ad, cs_name=cluster_solution_name, use_raw=True)
+    # cw_20200506 respect the use_raw parameter
+    centroid_df = centroids(ad, cs_name=cluster_solution_name, use_raw=use_raw)
 
 
 
@@ -87,14 +93,14 @@ def run_pipe(ad, cluster_solution_name="louvain", use_raw=True):
         #zstat_zpval = ztest_df.apply(ztest, axis='index')
         #zstat = zstat_zpval.apply(lambda x: x[0])
         #zpval = zstat_zpval.apply(lambda x: x[1])
-        from scipy.stats import mannwhitneyu
-        #test = lambda x: ttest_ind(x[cell_names], x[other_cell_names])
-        test = lambda x: mannwhitneyu(x[cell_names], x[other_cell_names])
+        # from scipy.stats import mannwhitneyu
+        test = lambda x: ttest_ind(x[cell_names], x[other_cell_names])
+        # test = lambda x: mannwhitneyu(x[cell_names], x[other_cell_names])
         stat_pval = expression_matrix.apply(test, axis="index")
         stat = stat_pval.apply(lambda x: x[0])
         pval = stat_pval.apply(lambda x: x[1])
 
-        df["u-statistic"] = stat
+        df["t-statistic"] = stat
         df['p-value'] = pval
         #df["zstat"] = zstat
         #df["zpval"] = zpval
@@ -106,6 +112,7 @@ def run_pipe(ad, cluster_solution_name="louvain", use_raw=True):
         dfs.append(df)
 
     markers_table = pd.concat(dfs, axis=0)
+    print("END run_pipe")
     return markers_table
 
 DEFAULT_LEGEND_METRICS = pd.Series(["avg.exp", "avg.exp.scaled", "pct.exp"])
