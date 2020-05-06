@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from scipy.sparse.csr import csr_matrix
 
+
 def n_clusters(adata, cluster_solution_name):
     return len(adata.obs[cluster_solution_name].unique().dropna())
 
@@ -16,7 +17,8 @@ def get_expression(adata, use_raw=True):
         ad = adata
 
     if isinstance(ad.X, csr_matrix):
-        df = pd.DataFrame(ad.X.toarray(), index=ad.obs_names, columns=ad.var_names)
+        df = pd.DataFrame(ad.X.toarray(), index=ad.obs_names,
+                          columns=ad.var_names)
     else:
         df = pd.DataFrame(ad.X, index=ad.obs_names, columns=ad.var_names)
 
@@ -94,7 +96,8 @@ def has_raw(ad):
     elif isinstance(ad.raw, anndata.core.anndata.Raw):
         return True
     else:
-        raise TypeError("anndata.Raw is of an unauthorized type: %s" % type(ad.raw))
+        raise TypeError(
+            "anndata.Raw is of an unauthorized type: %s" % type(ad.raw))
 
 
 def centroids(ad, cs_name="louvain", use_raw=True):
@@ -114,7 +117,7 @@ def centroids(ad, cs_name="louvain", use_raw=True):
         cells_in_cluster = ad.obs.index[ad.obs[cs_name] == cluster_name]
         if isinstance(adata.X, np.ndarray):
             means = adata[cells_in_cluster].X.mean(axis=0).tolist()
-        else: # might be sparse array?
+        else:  # might be sparse array?
             means = adata[cells_in_cluster].X.mean(axis=0).tolist()[0]
 
         centroid = pd.Series(
@@ -129,20 +132,6 @@ def centroids(ad, cs_name="louvain", use_raw=True):
 
 def get_xys(adata, key="X_umap"):
     return pd.DataFrame(adata.obsm[key], index=adata.obs_names)
-
-
-def get_expression(adata, use_raw):
-    if use_raw:
-        ad = adata.raw
-    else:
-        ad = adata
-
-    if isinstance(ad.X, csr_matrix):
-        df = pd.DataFrame(ad.X.toarray(), index=ad.obs_names, columns=ad.var_names)
-    else:
-        df = pd.DataFrame(ad.X, index=ad.obs_names, columns=ad.var_names)
-
-    return df.transpose()
 
 
 def mito_genes(gene_symbols):
