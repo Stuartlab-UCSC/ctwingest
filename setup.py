@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        "scanpy==1.3.7", "scipy", "pandas",
+        "anndata==0.7.1", "scanpy==1.4.4", "scipy", "pandas",
         "beautifulsoup4", "requests", "requests_toolbelt", "urllib3==1.24.2"
     ],
 )
